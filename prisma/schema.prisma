@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Group {
+  id    String @id // "A" through "L"
+  name  String
+  teams Team[]
+}
+
+model Team {
+  id          Int     @id @default(autoincrement())
+  name        String
+  code        String  @unique
+  groupId     String
+  fifaRanking Int
+
+  group       Group         @relation(fields: [groupId], references: [id])
+  homeMatches Match[]       @relation("HomeTeam")
+  awayMatches Match[]       @relation("AwayTeam")
+  conduct     TeamConduct[]
+}
+
+model Match {
+  id         Int     @id @default(autoincrement())
+  groupId    String
+  homeTeamId Int
+  awayTeamId Int
+  homeScore  Int?
+  awayScore  Int?
+  isFinal    Boolean @default(false)
+
+  home    Team          @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  away    Team          @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  conduct TeamConduct[]
+}
+
+// Disciplinary cards per team per match — used for tiebreaker Step 3
+model TeamConduct {
+  id                 Int @id @default(autoincrement())
+  matchId            Int
+  teamId             Int
+  yellowCards        Int @default(0)
+  indirectReds       Int @default(0) // second yellow leading to red
+  directReds         Int @default(0)
+  yellowAndRedCombos Int @default(0) // yellow card + direct red in same match
+
+  match Match @relation(fields: [matchId], references: [id])
+  team  Team  @relation(fields: [teamId], references: [id])
+
+  @@unique([matchId, teamId])
+}
